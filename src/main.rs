@@ -14,7 +14,7 @@ use std::thread;
 use std::time::Duration;
 
 #[derive(Parser)]
-#[command(name = "arbtt-wayland")]
+#[command(name = "arbtt-capture-wl")]
 #[command(about = "arbtt capture for Wayland compositors (niri, sway)")]
 struct Args {
     /// Capture interval in seconds
@@ -39,9 +39,18 @@ fn main() -> anyhow::Result<()> {
     let mut importer = ArbttImporter::new(args.logfile.as_deref(), args.interval)?;
 
     while running.load(Ordering::SeqCst) {
-        let state = backend.capture()?;
         let timestamp = Utc::now();
-        importer.write_entry(state, timestamp)?;
+
+        match backend.capture() {
+            Ok(state) => {
+                if let Err(e) = importer.write_entry(state, timestamp) {
+                    eprintln!("arbtt-capture-wl: write error: {e}");
+                }
+            }
+            Err(e) => {
+                eprintln!("arbtt-capture-wl: capture error: {e}");
+            }
+        }
 
         for _ in 0..(args.interval * 10) {
             if !running.load(Ordering::SeqCst) {

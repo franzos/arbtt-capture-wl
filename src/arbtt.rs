@@ -98,7 +98,6 @@ impl ArbttImporter {
 
 impl Drop for ArbttImporter {
     fn drop(&mut self) {
-        // Close stdin first so arbtt-import receives EOF and exits cleanly
         drop(self.child.stdin.take());
         let _ = self.child.wait();
     }
