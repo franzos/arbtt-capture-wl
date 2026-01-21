@@ -11,24 +11,28 @@ use super::{Backend, CaptureState, WindowInfo};
 
 /// Backend implementation for the niri Wayland compositor.
 pub struct NiriBackend {
-    socket: Socket,
+    socket: Option<Socket>,
 }
 
 impl NiriBackend {
-    /// Create a new niri backend by connecting to the niri IPC socket.
-    ///
-    /// The socket path is read from the `NIRI_SOCKET` environment variable.
+    /// Create a new niri backend.
     pub fn new() -> Result<Self> {
-        let socket = Socket::connect().context("failed to connect to niri socket")?;
-        Ok(Self { socket })
+        Ok(Self { socket: None })
     }
-}
 
-impl Backend for NiriBackend {
-    fn capture(&mut self) -> Result<CaptureState> {
+    /// Ensure socket is connected, reconnecting if necessary.
+    fn connect(&mut self) -> Result<&mut Socket> {
+        if self.socket.is_none() {
+            self.socket = Some(Socket::connect().context("failed to connect to niri socket")?);
+        }
+        Ok(self.socket.as_mut().unwrap())
+    }
+
+    fn capture_inner(&mut self) -> Result<CaptureState> {
+        let socket = self.connect()?;
+
         // Get all windows
-        let windows_reply = self
-            .socket
+        let windows_reply = socket
             .send(Request::Windows)
             .context("failed to send Windows request")?;
 
@@ -39,8 +43,7 @@ impl Backend for NiriBackend {
         };
 
         // Get focused window
-        let focused_reply = self
-            .socket
+        let focused_reply = socket
             .send(Request::FocusedWindow)
             .context("failed to send FocusedWindow request")?;
 
@@ -52,8 +55,7 @@ impl Backend for NiriBackend {
         };
 
         // Get workspaces to determine focused workspace name
-        let workspaces_reply = self
-            .socket
+        let workspaces_reply = socket
             .send(Request::Workspaces)
             .context("failed to send Workspaces request")?;
 
@@ -85,5 +87,16 @@ impl Backend for NiriBackend {
             .collect();
 
         Ok(CaptureState { windows, desktop })
+    }
+}
+
+impl Backend for NiriBackend {
+    fn capture(&mut self) -> Result<CaptureState> {
+        let result = self.capture_inner();
+        if result.is_err() {
+            // Disconnect so next capture attempt reconnects
+            self.socket = None;
+        }
+        result
     }
 }
