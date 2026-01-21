@@ -88,8 +88,9 @@ impl ArbttImporter {
             anyhow::anyhow!("arbtt-import stdin unavailable")
         })?;
 
-        serde_json::to_writer(&mut *stdin, &entry)?;
-        writeln!(stdin)?;
+        let mut buf = serde_json::to_vec(&entry)?;
+        buf.push(b'\n');
+        stdin.write_all(&buf)?;
         stdin.flush().context("arbtt-import write failed (process may have crashed)")?;
 
         Ok(())
