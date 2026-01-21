@@ -30,7 +30,8 @@ struct ArbttEntry {
 
 /// Manages arbtt-import subprocess
 pub struct ArbttImporter {
-    child: Child,
+    child: Option<Child>,
+    logfile: Option<String>,
     rate: u64,
 }
 
@@ -51,22 +52,49 @@ impl ArbttImporter {
             }
         }
 
+        let mut importer = Self {
+            child: None,
+            logfile: logfile.map(String::from),
+            rate,
+        };
+        importer.spawn()?;
+        Ok(importer)
+    }
+
+    fn spawn(&mut self) -> Result<()> {
         let mut cmd = Command::new("arbtt-import");
         cmd.args(["--format", "JSON", "--append"]);
-        if let Some(path) = logfile {
+        if let Some(ref path) = self.logfile {
             cmd.args(["--logfile", path]);
         }
         cmd.stdin(Stdio::piped());
 
         let child = cmd.spawn().context("failed to start arbtt-import (is arbtt installed?)")?;
-        Ok(Self { child, rate })
+        self.child = Some(child);
+        Ok(())
+    }
+
+    fn ensure_running(&mut self) -> Result<()> {
+        let needs_restart = match &mut self.child {
+            Some(child) => child.try_wait()?.is_some(),
+            None => true,
+        };
+
+        if needs_restart {
+            // Clean up old child if any
+            if let Some(mut child) = self.child.take() {
+                drop(child.stdin.take());
+                let _ = child.wait();
+            }
+            eprintln!("arbtt-capture-wl: restarting arbtt-import");
+            self.spawn()?;
+        }
+        Ok(())
     }
 
     pub fn write_entry(&mut self, state: CaptureState, timestamp: DateTime<Utc>) -> Result<()> {
-        // Check if arbtt-import is still running
-        if let Some(status) = self.child.try_wait()? {
-            anyhow::bail!("arbtt-import exited unexpectedly with {}", status);
-        }
+        // Ensure arbtt-import is running, restart if needed
+        self.ensure_running()?;
 
         let entry = ArbttEntry {
             date: timestamp.to_rfc3339(),
@@ -84,7 +112,10 @@ impl ArbttImporter {
             desktop: state.desktop,
         };
 
-        let stdin = self.child.stdin.as_mut().ok_or_else(|| {
+        let child = self.child.as_mut().ok_or_else(|| {
+            anyhow::anyhow!("arbtt-import not running")
+        })?;
+        let stdin = child.stdin.as_mut().ok_or_else(|| {
             anyhow::anyhow!("arbtt-import stdin unavailable")
         })?;
 
@@ -99,7 +130,9 @@ impl ArbttImporter {
 
 impl Drop for ArbttImporter {
     fn drop(&mut self) {
-        drop(self.child.stdin.take());
-        let _ = self.child.wait();
+        if let Some(ref mut child) = self.child {
+            drop(child.stdin.take());
+            let _ = child.wait();
+        }
     }
 }
