@@ -58,7 +58,7 @@ impl ArbttImporter {
         }
         cmd.stdin(Stdio::piped());
 
-        let child = cmd.spawn()?;
+        let child = cmd.spawn().context("failed to start arbtt-import (is arbtt installed?)")?;
         Ok(Self { child, rate })
     }
 
