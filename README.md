@@ -26,8 +26,8 @@ arbtt-dump
 
 ## Supported compositors
 
+- sway (via `$SWAYSOCK`)
 - niri (via `$NIRI_SOCKET`)
-- sway (planned)
 
 ## License
 

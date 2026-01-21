@@ -2,8 +2,10 @@
 // Copyright (C) 2026 Franz Geffke <mail@gofranz.com>
 
 mod niri;
+mod sway;
 
 pub use niri::NiriBackend;
+pub use sway::SwayBackend;
 
 use anyhow::Result;
 
@@ -29,9 +31,11 @@ pub trait Backend {
 
 /// Detect and create appropriate backend
 pub fn detect_backend() -> Result<Box<dyn Backend>> {
-    if std::env::var("NIRI_SOCKET").is_ok() {
+    if std::env::var("SWAYSOCK").is_ok() {
+        Ok(Box::new(SwayBackend::new()?))
+    } else if std::env::var("NIRI_SOCKET").is_ok() {
         Ok(Box::new(NiriBackend::new()?))
     } else {
-        anyhow::bail!("No supported compositor detected (checked: NIRI_SOCKET)")
+        anyhow::bail!("No supported compositor detected (checked: SWAYSOCK, NIRI_SOCKET)")
     }
 }
