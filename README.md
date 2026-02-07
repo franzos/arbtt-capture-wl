@@ -24,6 +24,12 @@ arbtt-stats
 arbtt-dump
 ```
 
+## Install
+
+### From GitHub releases
+
+Pre-built binaries and packages (`.deb`, `.rpm`) are available on the [Releases](https://github.com/franzos/arbtt-capture-wl/releases) page.
+
 ## Supported compositors
 
 - sway (via `$SWAYSOCK`)
