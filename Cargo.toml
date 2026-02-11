@@ -1,6 +1,6 @@
 [package]
 name = "arbtt-capture-wl"
-version = "0.1.1"
+version = "0.1.2"
 edition = "2021"
 description = "arbtt capture for niri (and sway) Wayland compositors"
 license = "GPL-3.0-only"

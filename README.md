@@ -26,9 +26,27 @@ arbtt-dump
 
 ## Install
 
-### From GitHub releases
+**Pre-built binaries:**
 
-Pre-built binaries and packages (`.deb`, `.rpm`) are available on the [Releases](https://github.com/franzos/arbtt-capture-wl/releases) page.
+Download the latest release from [GitHub Releases](https://github.com/franzos/arbtt-capture-wl/releases):
+
+```bash
+# Linux (x86_64) - binary
+curl -sL https://github.com/franzos/arbtt-capture-wl/releases/latest/download/arbtt-capture-wl-x86_64-unknown-linux-gnu.tar.gz | tar xz
+sudo mv arbtt-capture-wl /usr/local/bin/
+```
+
+**Packages:**
+
+`.deb` and `.rpm` packages are also available on the [Releases](https://github.com/franzos/arbtt-capture-wl/releases) page.
+
+```bash
+# Debian/Ubuntu
+sudo dpkg -i arbtt-capture-wl_*.deb
+
+# Fedora/RHEL
+sudo rpm -i arbtt-capture-wl-*.rpm
+```
 
 ## Supported compositors
 
