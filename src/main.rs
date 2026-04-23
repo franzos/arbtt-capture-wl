@@ -8,9 +8,7 @@ use arbtt::ArbttImporter;
 use backend::detect_backend;
 use chrono::Utc;
 use clap::Parser;
-use std::sync::atomic::{AtomicBool, Ordering};
-use std::sync::Arc;
-use std::thread;
+use std::sync::mpsc;
 use std::time::Duration;
 
 #[derive(Parser)]
@@ -28,17 +26,25 @@ struct Args {
 
 fn main() -> anyhow::Result<()> {
     let args = Args::parse();
+    let rate = args.interval.max(1);
+    let interval = Duration::from_secs(rate);
 
-    let running = Arc::new(AtomicBool::new(true));
-    let r = running.clone();
+    // Ignore SIGPIPE so a dead arbtt-import doesn't kill us; the write path
+    // surfaces the broken pipe as an error and triggers a restart.
+    // SAFETY: called at startup, single-threaded, before any process spawn.
+    unsafe {
+        libc::signal(libc::SIGPIPE, libc::SIG_IGN);
+    }
+
+    let (tx, rx) = mpsc::channel::<()>();
     ctrlc::set_handler(move || {
-        r.store(false, Ordering::SeqCst);
+        let _ = tx.send(());
     })?;
 
     let mut backend = detect_backend()?;
-    let mut importer = ArbttImporter::new(args.logfile.as_deref(), args.interval)?;
+    let mut importer = ArbttImporter::new(args.logfile.as_deref(), rate)?;
 
-    while running.load(Ordering::SeqCst) {
+    loop {
         let timestamp = Utc::now();
 
         match backend.capture() {
@@ -52,11 +58,9 @@ fn main() -> anyhow::Result<()> {
             }
         }
 
-        for _ in 0..(args.interval * 10) {
-            if !running.load(Ordering::SeqCst) {
-                break;
-            }
-            thread::sleep(Duration::from_millis(100));
+        match rx.recv_timeout(interval) {
+            Ok(()) | Err(mpsc::RecvTimeoutError::Disconnected) => break,
+            Err(mpsc::RecvTimeoutError::Timeout) => {}
         }
     }
 

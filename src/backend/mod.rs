@@ -8,17 +8,16 @@ pub use niri::NiriBackend;
 pub use sway::SwayBackend;
 
 use anyhow::Result;
+use serde::Serialize;
 
-/// Window information captured from compositor
-#[derive(Debug, Clone)]
+#[derive(Debug, Serialize)]
 pub struct WindowInfo {
     pub title: String,
     pub program: String,
     pub active: bool,
 }
 
-/// Capture state from compositor
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct CaptureState {
     pub windows: Vec<WindowInfo>,
     pub desktop: String,
@@ -32,9 +31,9 @@ pub trait Backend {
 /// Detect and create appropriate backend
 pub fn detect_backend() -> Result<Box<dyn Backend>> {
     if std::env::var("SWAYSOCK").is_ok() {
-        Ok(Box::new(SwayBackend::new()?))
+        Ok(Box::new(SwayBackend::new()))
     } else if std::env::var("NIRI_SOCKET").is_ok() {
-        Ok(Box::new(NiriBackend::new()?))
+        Ok(Box::new(NiriBackend::new()))
     } else {
         anyhow::bail!("No supported compositor detected (checked: SWAYSOCK, NIRI_SOCKET)")
     }

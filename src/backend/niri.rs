@@ -9,18 +9,15 @@ use niri_ipc::{Request, Response};
 
 use super::{Backend, CaptureState, WindowInfo};
 
-/// Backend implementation for the niri Wayland compositor.
 pub struct NiriBackend {
     socket: Option<Socket>,
 }
 
 impl NiriBackend {
-    /// Create a new niri backend.
-    pub fn new() -> Result<Self> {
-        Ok(Self { socket: None })
+    pub fn new() -> Self {
+        Self { socket: None }
     }
 
-    /// Ensure socket is connected, reconnecting if necessary.
     fn connect(&mut self) -> Result<&mut Socket> {
         if self.socket.is_none() {
             self.socket = Some(Socket::connect().context("failed to connect to niri socket")?);
@@ -31,7 +28,6 @@ impl NiriBackend {
     fn capture_inner(&mut self) -> Result<CaptureState> {
         let socket = self.connect()?;
 
-        // Get all windows
         let windows_reply = socket
             .send(Request::Windows)
             .context("failed to send Windows request")?;
@@ -42,19 +38,6 @@ impl NiriBackend {
             Err(e) => anyhow::bail!("niri error on Windows request: {}", e),
         };
 
-        // Get focused window
-        let focused_reply = socket
-            .send(Request::FocusedWindow)
-            .context("failed to send FocusedWindow request")?;
-
-        let focused_window_id = match focused_reply {
-            Ok(Response::FocusedWindow(Some(w))) => Some(w.id),
-            Ok(Response::FocusedWindow(None)) => None,
-            Ok(other) => anyhow::bail!("unexpected response to FocusedWindow request: {:?}", other),
-            Err(e) => anyhow::bail!("niri error on FocusedWindow request: {}", e),
-        };
-
-        // Get workspaces to determine focused workspace name
         let workspaces_reply = socket
             .send(Request::Workspaces)
             .context("failed to send Workspaces request")?;
@@ -65,7 +48,6 @@ impl NiriBackend {
             Err(e) => anyhow::bail!("niri error on Workspaces request: {}", e),
         };
 
-        // Find focused workspace name
         let desktop = workspaces
             .iter()
             .find(|ws| ws.is_focused)
@@ -76,13 +58,12 @@ impl NiriBackend {
             })
             .unwrap_or_else(|| String::from("unknown"));
 
-        // Convert windows to WindowInfo
         let windows: Vec<WindowInfo> = niri_windows
-            .iter()
+            .into_iter()
             .map(|w| WindowInfo {
-                title: w.title.clone().unwrap_or_default(),
-                program: w.app_id.clone().unwrap_or_default(),
-                active: Some(w.id) == focused_window_id,
+                title: w.title.unwrap_or_default(),
+                program: w.app_id.unwrap_or_default(),
+                active: w.is_focused,
             })
             .collect();
 
@@ -94,7 +75,6 @@ impl Backend for NiriBackend {
     fn capture(&mut self) -> Result<CaptureState> {
         let result = self.capture_inner();
         if result.is_err() {
-            // Disconnect so next capture attempt reconnects
             self.socket = None;
         }
         result

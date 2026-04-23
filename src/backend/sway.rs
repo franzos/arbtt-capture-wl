@@ -15,15 +15,14 @@ pub struct SwayBackend {
 
 impl SwayBackend {
     /// Create a new sway backend.
-    pub fn new() -> Result<Self> {
-        Ok(Self { connection: None })
+    pub fn new() -> Self {
+        Self { connection: None }
     }
 
     /// Ensure connection is established, reconnecting if necessary.
     fn connect(&mut self) -> Result<&mut Connection> {
         if self.connection.is_none() {
-            self.connection =
-                Some(Connection::new().context("failed to connect to sway socket")?);
+            self.connection = Some(Connection::new().context("failed to connect to sway socket")?);
         }
         Ok(self.connection.as_mut().unwrap())
     }
