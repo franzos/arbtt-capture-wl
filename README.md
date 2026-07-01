@@ -1,5 +1,7 @@
 # arbtt-capture-wl
 
+[![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/franzos/arbtt-capture-wl/badge)](https://scorecard.dev/viewer/?uri=github.com/franzos/arbtt-capture-wl)
+
 arbtt capture for Wayland compositors (niri, sway).
 
 ## Usage
