@@ -7,6 +7,7 @@ use chrono::{DateTime, Utc};
 use serde::Serialize;
 use std::fs;
 use std::io::Write;
+use std::os::unix::fs::DirBuilderExt;
 use std::os::unix::process::CommandExt;
 use std::path::Path;
 use std::process::{Child, Command, Stdio};
@@ -36,7 +37,11 @@ impl ArbttImporter {
             }
         } else if let Some(home) = std::env::var_os("HOME") {
             let arbtt_dir = Path::new(&home).join(".arbtt");
-            fs::create_dir_all(&arbtt_dir)
+            // The log holds every window title; keep it out of reach of other users.
+            fs::DirBuilder::new()
+                .recursive(true)
+                .mode(0o700)
+                .create(&arbtt_dir)
                 .with_context(|| format!("failed to create {}", arbtt_dir.display()))?;
         }
 
@@ -108,9 +113,8 @@ impl ArbttImporter {
             .stdin
             .as_mut()
             .ok_or_else(|| anyhow::anyhow!("arbtt-import stdin unavailable"))?;
-        stdin.write_all(buf)?;
         stdin
-            .flush()
+            .write_all(buf)
             .context("arbtt-import write failed (process may have crashed)")?;
         Ok(())
     }

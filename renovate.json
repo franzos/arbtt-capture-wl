@@ -7,6 +7,12 @@
   "labels": ["dependencies"],
   "dependencyDashboard": true,
   "dependencyDashboardApproval": true,
+  "osvVulnerabilityAlerts": true,
+  "vulnerabilityAlerts": {
+    "dependencyDashboardApproval": false,
+    "automerge": true,
+    "labels": ["dependencies", "security"]
+  },
   "packageRules": [
     {
       "description": "One grouped PR for non-major Rust crate bumps",

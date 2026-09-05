@@ -34,9 +34,15 @@ Download the latest release from [GitHub Releases](https://github.com/franzos/ar
 
 ```bash
 # Linux (x86_64) - binary
-curl -sL https://github.com/franzos/arbtt-capture-wl/releases/latest/download/arbtt-capture-wl-x86_64-unknown-linux-gnu.tar.gz | tar xz
+base=https://github.com/franzos/arbtt-capture-wl/releases/latest/download
+curl -sLO $base/arbtt-capture-wl-x86_64-unknown-linux-gnu.tar.gz
+curl -sLO $base/arbtt-capture-wl-x86_64-unknown-linux-gnu.tar.gz.sha256
+sha256sum -c arbtt-capture-wl-x86_64-unknown-linux-gnu.tar.gz.sha256
+tar xzf arbtt-capture-wl-x86_64-unknown-linux-gnu.tar.gz
 sudo mv arbtt-capture-wl /usr/local/bin/
 ```
+
+Release assets carry a build provenance attestation; verify with `gh attestation verify <file> --repo franzos/arbtt-capture-wl`.
 
 **Packages:**
 
@@ -54,6 +60,10 @@ sudo rpm -i arbtt-capture-wl-*.rpm
 
 - sway (via `$SWAYSOCK`)
 - niri (via `$NIRI_SOCKET`)
+
+## Limitations
+
+Idle time isn't detected. Every sample is recorded as active, so `$idle` conditions in `categorize.cfg` never match and time spent away from an unlocked machine counts as active. Neither compositor exposes idle time over its IPC socket; that would need an `ext-idle-notify-v1` listener.
 
 ## License
 
